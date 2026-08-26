@@ -3,11 +3,10 @@ name: Android Debug build
 on:
   push:
     branches:
-      - dev-*
+      - master
 
 jobs:
   build:
-    if: github.repository == 'quillpad/quillpad'
     runs-on: ubuntu-latest
 
     steps:
@@ -29,8 +28,7 @@ jobs:
 
       - name: Setup keystore
         run: |
-          echo "${{secrets.KEYSTORE}}" > keystore.jks.asc
-          gpg -d --batch --passphrase "${{secrets.GPG_PASS}}" --output app/keystore.jks keystore.jks.asc
+          echo "${{secrets.KEYSTORE}}" | base64 --decode > app/keystore.jks
 
       - name: Build App
         run: |
@@ -42,7 +40,7 @@ jobs:
               -Pkeyalias=${{secrets.KEY_NAME}}
 
       - name: Delete keystore
-        run: rm -f keystore.jks keystore.jks.asc
+        run: rm -f app/keystore.jks
 
       - name: Archive APK
         uses: actions/upload-artifact@v4
