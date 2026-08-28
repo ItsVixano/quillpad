@@ -9,10 +9,12 @@ import kotlinx.coroutines.sync.withLock
 import me.msoul.datastore.defaultOf
 import org.qosp.notes.data.dao.IdMappingDao
 import org.qosp.notes.data.dao.NoteDao
+import org.qosp.notes.data.dao.NotebookDao
 import org.qosp.notes.data.dao.ReminderDao
 import org.qosp.notes.data.model.IdMapping
 import org.qosp.notes.data.model.Note
 import org.qosp.notes.data.model.NoteEntity
+import org.qosp.notes.data.model.Notebook
 import org.qosp.notes.data.sync.core.AvailabilityStatus
 import org.qosp.notes.data.sync.core.BackendProvider
 import org.qosp.notes.data.sync.core.BaseResult
@@ -40,6 +42,7 @@ class NoteRepositoryImpl(
     private val noteDao: NoteDao,
     private val idMappingDao: IdMappingDao,
     private val reminderDao: ReminderDao,
+    private val notebookDao: NotebookDao,
     private val backendProvider: BackendProvider,
     private val synchronizeNotes: SynchronizeNotes,
     private val processRemoteActions: ProcessRemoteActions,
@@ -110,18 +113,28 @@ class NoteRepositoryImpl(
         }
     }
 
+    private suspend fun resolveNotebookIdForCategory(category: String?): Long? {
+        val normalized = category?.trim()?.trim('/') ?: return null
+        if (normalized.isEmpty()) return null
+        val existing = notebookDao.findByName(normalized)
+        if (existing != null) return existing.id
+        return notebookDao.insert(Notebook(name = normalized))
+    }
+
     private suspend fun applyLocalUpdates(localUpdates: List<NoteAction>, syncProvider: ISyncBackend) {
         for (action in localUpdates) {
             try {
                 when (action) {
                     is NoteAction.Create -> {
                         val syncNote = action.remoteNote
-                        val noteId = insertNote(syncNote.toLocalNote(defaultPinned = false), sync = false)
+                        val notebookId = resolveNotebookIdForCategory(syncNote.category)
+                        val noteId = insertNote(syncNote.toLocalNote(defaultPinned = false, notebookId = notebookId), sync = false)
                         idMappingDao.insert(syncNote.getMapping(noteId, syncProvider.type))
                     }
 
                     is NoteAction.Update -> {
-                        val mergedNote = action.remoteNote.updateLocalNote(action.note)
+                        val notebookId = resolveNotebookIdForCategory(action.remoteNote.category)
+                        val mergedNote = action.remoteNote.updateLocalNote(action.note, notebookId = notebookId)
                         val note = if (action.note.isList) {
                             val tasks = mergedNote.mdToTaskList(mergedNote.content)
                             mergedNote.copy(content = "", taskList = tasks, isList = true)

@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.first
 import org.qosp.notes.data.dao.NotebookDao
 import org.qosp.notes.data.model.Notebook
 
+import java.time.Instant
+
 class NotebookRepository(
     private val notebookDao: NotebookDao,
     private val noteRepository: NoteRepository,
@@ -21,10 +23,23 @@ class NotebookRepository(
             .filterNot { it.isLocalOnly }
 
         notebookDao.delete(*notebooks)
+        if (affectedNotes.isNotEmpty()) {
+            val updatedNotes = affectedNotes.map { it.copy(notebookId = null, modifiedDate = Instant.now().epochSecond) }.toTypedArray()
+            noteRepository.updateNotes(*updatedNotes)
+        }
     }
 
     suspend fun update(vararg notebooks: Notebook, shouldSync: Boolean = true) {
         notebookDao.update(*notebooks)
+        if (shouldSync) {
+            notebooks.forEach { notebook ->
+                val notes = noteRepository.getByNotebook(notebook.id).first().filterNot { it.isLocalOnly }
+                if (notes.isNotEmpty()) {
+                    val updatedNotes = notes.map { it.copy(modifiedDate = Instant.now().epochSecond) }.toTypedArray()
+                    noteRepository.updateNotes(*updatedNotes)
+                }
+            }
+        }
     }
 
     fun getById(notebookId: Long): Flow<Notebook?> {
