@@ -185,6 +185,7 @@ abstract class AbstractNotesFragment(@LayoutRes resId: Int) : BaseFragment(resId
         // Configure the recycler view
         recyclerView.apply {
             adapter = recyclerAdapter
+            setItemViewCacheSize(10)
 
             val padding = resources.getDimensionPixelSize(R.dimen.recycler_padding) / 2
             setPadding(
@@ -279,12 +280,20 @@ abstract class AbstractNotesFragment(@LayoutRes resId: Int) : BaseFragment(resId
         // Submit the list to the adapter
         onNotesChanged(data.notes)
 
-        // Update recycler layout and note order
-        recyclerView.layoutManager = when (data.layoutMode) {
-            LayoutMode.LIST -> LinearLayoutManager(requireContext())
-            LayoutMode.GRID -> StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
+        // Update recycler layout and note order if layout mode changed
+        val currentLayoutManager = recyclerView.layoutManager
+        val needsNewLayoutManager = when (data.layoutMode) {
+            LayoutMode.LIST -> currentLayoutManager !is LinearLayoutManager || currentLayoutManager is StaggeredGridLayoutManager
+            LayoutMode.GRID -> currentLayoutManager !is StaggeredGridLayoutManager
         }
-        onLayoutModeChanged()
+
+        if (needsNewLayoutManager) {
+            recyclerView.layoutManager = when (data.layoutMode) {
+                LayoutMode.LIST -> LinearLayoutManager(requireContext())
+                LayoutMode.GRID -> StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
+            }
+            onLayoutModeChanged()
+        }
         onSortMethodChanged()
     }
 

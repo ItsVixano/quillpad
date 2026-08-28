@@ -6,6 +6,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.text.InputType
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.StrikethroughSpan
 import android.view.MotionEvent
 import android.view.inputmethod.EditorInfo
 import androidx.constraintlayout.widget.ConstraintSet
@@ -22,7 +25,6 @@ import org.qosp.notes.data.model.NoteTask
 import org.qosp.notes.databinding.LayoutTaskBinding
 import org.qosp.notes.ui.utils.applyMask
 import org.qosp.notes.ui.utils.dp
-import org.qosp.notes.ui.utils.ellipsize
 import org.qosp.notes.ui.utils.getDrawableCompat
 import org.qosp.notes.ui.utils.hideKeyboard
 import org.qosp.notes.ui.utils.requestFocusAndKeyboard
@@ -145,7 +147,6 @@ class TaskViewHolder(
         textView.isVisible = inPreview || isChecked || !isEnabled
         setTextViewText(text.toString(), isChecked)
         textView.isEnabled = !isChecked
-        textView.ellipsize()
 
         editText.isVisible = !inPreview && !isChecked && isEnabled
         editText.setText(text)
@@ -161,9 +162,15 @@ class TaskViewHolder(
     }
 
     private fun setTextViewText(text: String, isChecked: Boolean) {
-        binding.textView.text.toSpannable().clearSpans()
         if (isChecked && text.isNotBlank()) {
-            markwon.setMarkdown(binding.textView, "~~${text.trim()}~~")
+            val spannable = SpannableString(text)
+            spannable.setSpan(
+                StrikethroughSpan(),
+                0,
+                text.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            binding.textView.text = spannable
         } else {
             binding.textView.text = text
         }

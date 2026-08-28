@@ -2,11 +2,9 @@ package org.qosp.notes.ui.common.recycler
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.view.ContextThemeWrapper
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnPreDraw
-import androidx.core.view.isNotEmpty
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -21,10 +19,10 @@ import org.qosp.notes.databinding.LayoutNoteBinding
 import org.qosp.notes.ui.attachments.recycler.AttachmentViewHolder
 import org.qosp.notes.ui.attachments.recycler.AttachmentsAdapter
 import org.qosp.notes.ui.attachments.recycler.AttachmentsPreviewGridManager
-import org.qosp.notes.ui.editor.markdown.applyTo
+import org.qosp.notes.ui.editor.markdown.MarkdownPreviewCache
+import org.qosp.notes.ui.editor.markdown.renderMarkdown
 import org.qosp.notes.ui.tasks.TasksAdapter
 import org.qosp.notes.ui.utils.dp
-import org.qosp.notes.ui.utils.ellipsize
 import org.qosp.notes.ui.utils.resId
 
 class NoteViewHolder(
@@ -69,31 +67,20 @@ class NoteViewHolder(
     }
 
     @SuppressLint("SetTextI18n")
-    private fun updateTags(tags: List<Tag>) {
-        binding.containerTags.isVisible = tags.isNotEmpty()
-
+    private fun updateTags(tags: List<Tag>) = with(binding) {
         if (tags.isEmpty()) {
-            if (binding.containerTags.isNotEmpty()) binding.containerTags.removeAllViews()
-            return
+            containerTags.isVisible = false
+            return@with
         }
 
-        val count = tags.size
-        val needed = if (count > 1) 2 else 1
+        containerTags.isVisible = true
+        tagPrimary.text = "# ${tags[0].name}"
 
-        // Re-use existing views to avoid unnecessary allocations and layout passes
-        while (binding.containerTags.childCount > needed) {
-            binding.containerTags.removeViewAt(binding.containerTags.childCount - 1)
-        }
-
-        while (binding.containerTags.childCount < needed) {
-            val tagView = TextView(ContextThemeWrapper(context, R.style.TagChip))
-            binding.containerTags.addView(tagView)
-        }
-
-        (binding.containerTags.getChildAt(0) as TextView).text = "# ${tags[0].name}"
-
-        if (needed > 1) {
-            (binding.containerTags.getChildAt(1) as TextView).text = "+${count - 1}"
+        if (tags.size > 1) {
+            tagCount.isVisible = true
+            tagCount.text = "+${tags.size - 1}"
+        } else {
+            tagCount.isVisible = false
         }
     }
 
@@ -119,16 +106,27 @@ class NoteViewHolder(
         textViewContent.isVisible = showContent
 
         if (showContent) {
-            textViewContent.ellipsize()
-
             if (note.isMarkdownEnabled && note.content.isNotBlank()) {
-                try {
-                    markwon.applyTo(textViewContent, note.content) {
-                        maximumTableColumns = 4
-                        tableReplacement = { Code(context.getString(R.string.message_cannot_preview_table)) }
+                val cacheKey = "${note.id}_${note.modifiedDate}"
+                val cached = MarkdownPreviewCache.get(cacheKey)
+                if (cached != null) {
+                    markwon.setParsedMarkdown(textViewContent, cached)
+                } else {
+                    try {
+                        val previewContent = if (note.content.length > 2000) {
+                            note.content.substring(0, 2000)
+                        } else {
+                            note.content
+                        }
+                        val rendered = markwon.renderMarkdown(previewContent) {
+                            maximumTableColumns = 4
+                            tableReplacement = { Code(context.getString(R.string.message_cannot_preview_table)) }
+                        }
+                        MarkdownPreviewCache.put(cacheKey, rendered)
+                        markwon.setParsedMarkdown(textViewContent, rendered)
+                    } catch (e: Throwable) {
+                        textViewContent.text = ""
                     }
-                } catch (e: Throwable) {
-                    textViewContent.text = ""
                 }
             } else {
                 textViewContent.text = note.content
@@ -151,7 +149,9 @@ class NoteViewHolder(
                         context.resources.getQuantityString(R.plurals.more_items, moreItems, moreItems)
                 }
             }
-            tasksAdapter.submitList(taskList, useDiff)
+            if (tasksAdapter.tasks != taskList) {
+                tasksAdapter.submitList(taskList, useDiff)
+            }
         }
     }
 
