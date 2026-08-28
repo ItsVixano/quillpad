@@ -23,9 +23,15 @@ interface NotebookDao {
     @Query("SELECT * FROM notebooks WHERE id = :notebookId")
     fun getById(notebookId: Long): Flow<Notebook?>
 
+    @Query("SELECT * FROM notebooks WHERE id = :notebookId")
+    suspend fun findById(notebookId: Long): Notebook?
+
     @Query("SELECT * FROM notebooks")
     fun getAll(): Flow<List<Notebook>>
 
     @Query("SELECT * FROM notebooks WHERE notebookName = :name LIMIT 1")
     fun getByName(name: String): Flow<Notebook?>
+
+    @Query("SELECT * FROM notebooks WHERE notebookName = :name LIMIT 1")
+    suspend fun findByName(name: String): Notebook?
 }

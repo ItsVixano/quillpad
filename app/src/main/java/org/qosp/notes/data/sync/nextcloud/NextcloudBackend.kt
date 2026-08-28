@@ -3,6 +3,7 @@ package org.qosp.notes.data.sync.nextcloud
 import android.util.Log
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.qosp.notes.data.dao.NotebookDao
 import org.qosp.notes.data.model.IdMapping
 import org.qosp.notes.data.model.Note
 import org.qosp.notes.data.sync.asSyncNote
@@ -17,8 +18,15 @@ import kotlin.time.TimeSource
 class NextcloudBackend(
     private val apiProvider: NextcloudAPIProvider,
     private val config: NextcloudConfig,
+    private val notebookDao: NotebookDao? = null,
     private val timeSource: TimeSource = TimeSource.Monotonic
 ) : ISyncBackend {
+
+    constructor(
+        apiProvider: NextcloudAPIProvider,
+        config: NextcloudConfig,
+        timeSource: TimeSource
+    ) : this(apiProvider, config, null, timeSource)
 
     private val tag = javaClass.simpleName
     override val type: CloudService = CloudService.NEXTCLOUD
@@ -62,17 +70,24 @@ class NextcloudBackend(
         return@withLock status
     }
 
+    private suspend fun getCategoryForNote(note: Note): String {
+        val notebookId = note.notebookId ?: return ""
+        return notebookDao?.findById(notebookId)?.name ?: ""
+    }
+
     override suspend fun createNote(note: Note): SyncNote {
         Log.d(tag, "createNote() called with: note = ${note.title}")
         val api = apiProvider.getAPI()
-        return api.createNote(note.asNextcloudNote(0, ""), config).asSyncNote()
+        val category = getCategoryForNote(note)
+        return api.createNote(note.asNextcloudNote(0, category), config).asSyncNote()
     }
 
     override suspend fun updateNote(note: Note, mapping: IdMapping): IdMapping {
         requireNotNull(mapping.remoteNoteId) { "Remote note id is null." }
         Log.d(tag, "updateNote: ${note.title}")
         val api = apiProvider.getAPI()
-        val nNote = note.asNextcloudNote(mapping.remoteNoteId, "")
+        val category = getCategoryForNote(note)
+        val nNote = note.asNextcloudNote(mapping.remoteNoteId, category)
         val updatedNote = api.updateNote(nNote, mapping.extras ?: "", config)
         return mapping.copy(remoteNoteId = updatedNote.id, extras = updatedNote.etag)
     }
