@@ -17,8 +17,12 @@ class NoteRecyclerAdapter(
     private var visibleItems = listOf<Note>()
     var searchMode: Boolean = false
 
-    private val tasksViewPool = RecyclerView.RecycledViewPool()
-    private val attachmentsViewPool = RecyclerView.RecycledViewPool()
+    private val tasksViewPool = RecyclerView.RecycledViewPool().apply {
+        setMaxRecycledViews(0, 25)
+    }
+    private val attachmentsViewPool = RecyclerView.RecycledViewPool().apply {
+        setMaxRecycledViews(0, 20)
+    }
 
     var showHiddenNotes: Boolean = false
         set(value) {

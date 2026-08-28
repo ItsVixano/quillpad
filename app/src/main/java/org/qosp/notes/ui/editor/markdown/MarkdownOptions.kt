@@ -16,6 +16,29 @@ class MarkdownOptions {
     var tableReplacement: () -> Node = { Code("...") }
 }
 
+object MarkdownPreviewCache {
+    private val cache = androidx.collection.LruCache<String, android.text.Spanned>(300)
+
+    fun get(key: String): android.text.Spanned? = cache.get(key)
+    fun put(key: String, value: android.text.Spanned) {
+        cache.put(key, value)
+    }
+    fun clear() {
+        cache.evictAll()
+    }
+}
+
+fun Markwon.renderMarkdown(content: String, withOptions: MarkdownOptions.() -> Unit = {}): android.text.Spanned {
+    val options = MarkdownOptions()
+    options.withOptions()
+
+    val node = parse(content)
+    val visitor = OptionsVisitor(options)
+    node.accept(visitor)
+
+    return render(node)
+}
+
 inline fun Markwon.applyTo(textView: TextView, content: String, withOptions: MarkdownOptions.() -> Unit = {}) {
     val options = MarkdownOptions()
     withOptions(options)

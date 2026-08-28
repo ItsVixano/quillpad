@@ -57,18 +57,27 @@ fun View.liftAppBarOnScroll(
     elevation: Float
 ) {
     appBar.postDelayed(300) {
-        appBar.elevation = if (canScrollVertically(-1)) elevation else 0F
+        val newElevation = if (canScrollVertically(-1)) elevation else 0F
+        if (appBar.elevation != newElevation) {
+            appBar.elevation = newElevation
+        }
     }
     when (this) {
         is RecyclerView -> addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                appBar.elevation = if (canScrollVertically(-1)) elevation else 0F
+                val newElevation = if (canScrollVertically(-1)) elevation else 0F
+                if (appBar.elevation != newElevation) {
+                    appBar.elevation = newElevation
+                }
             }
         })
 
         is ScrollView, is NestedScrollView -> {
             val listener = ViewTreeObserver.OnScrollChangedListener {
-                appBar.elevation = if (canScrollVertically(-1)) elevation else 0F
+                val newElevation = if (canScrollVertically(-1)) elevation else 0F
+                if (appBar.elevation != newElevation) {
+                    appBar.elevation = newElevation
+                }
             }
 
             viewTreeObserver.addOnScrollChangedListener(listener)
