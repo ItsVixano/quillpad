@@ -2,12 +2,15 @@ package org.qosp.notes.ui.utils.views
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.view.ActionMode
 import android.content.Context
 import android.os.Build
 import android.os.Parcelable
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.AttributeSet
+import android.util.Log
+import android.view.MotionEvent
 import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.content.getSystemService
 import androidx.core.os.bundleOf
@@ -35,12 +38,45 @@ class ExtendedEditText : AppCompatEditText {
     var isMarkdownEnabled: Boolean = false
     var onUndoRedoListener: OnCanUndoRedoListener? = null
 
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (width <= 0 || height <= 0 || layout == null) {
+            return false
+        }
+        return try {
+            val handled = super.onTouchEvent(event)
+            if (event.action == MotionEvent.ACTION_UP) {
+                performClick()
+            }
+            handled
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error handling touch event", e)
+            false
+        }
+    }
+
+    override fun performClick(): Boolean {
+        if (width <= 0 || height <= 0 || layout == null) {
+            return false
+        }
+        return try {
+            super.performClick()
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error performing click", e)
+            false
+        }
+    }
+
     // With a regular EditText, users can paste rich text inside which may look out of place.
     // This function prevents that from happening by changing the clip board
     override fun onTextContextMenuItem(id: Int): Boolean {
         if (id == android.R.id.paste) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                return super.onTextContextMenuItem(android.R.id.pasteAsPlainText)
+                return try {
+                    super.onTextContextMenuItem(android.R.id.pasteAsPlainText)
+                } catch (e: Exception) {
+                    Log.e("ExtendedEditText", "Error pasting as plain text", e)
+                    false
+                }
             }
 
             // If device doesn't support paste as plain text
@@ -53,7 +89,125 @@ class ExtendedEditText : AppCompatEditText {
             }
         }
 
-        return super.onTextContextMenuItem(id)
+        return try {
+            super.onTextContextMenuItem(id)
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error handling text context menu item", e)
+            false
+        }
+    }
+
+    override fun showContextMenu(): Boolean {
+        return try {
+            super.showContextMenu()
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error showing context menu", e)
+            false
+        }
+    }
+
+    override fun showContextMenu(x: Float, y: Float): Boolean {
+        return try {
+            super.showContextMenu(x, y)
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error showing context menu at ($x, $y)", e)
+            false
+        }
+    }
+
+    override fun onSelectionChanged(selStart: Int, selEnd: Int) {
+        try {
+            super.onSelectionChanged(selStart, selEnd)
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error in onSelectionChanged", e)
+        }
+    }
+
+    override fun selectAll() {
+        if (width <= 0 || height <= 0 || layout == null) {
+            return
+        }
+        try {
+            super.selectAll()
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error selecting all", e)
+        }
+    }
+
+    override fun extendSelection(index: Int) {
+        if (width <= 0 || height <= 0 || layout == null) {
+            return
+        }
+        try {
+            super.extendSelection(index)
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error extending selection", e)
+        }
+    }
+
+    override fun startActionMode(callback: ActionMode.Callback?): ActionMode? {
+        if (width <= 0 || height <= 0 || layout == null) {
+            return null
+        }
+        return try {
+            super.startActionMode(callback)
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error starting action mode", e)
+            null
+        }
+    }
+
+    override fun startActionMode(callback: ActionMode.Callback?, type: Int): ActionMode? {
+        if (width <= 0 || height <= 0 || layout == null) {
+            return null
+        }
+        return try {
+            super.startActionMode(callback, type)
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error starting action mode with type", e)
+            null
+        }
+    }
+
+    override fun performLongClick(): Boolean {
+        if (width <= 0 || height <= 0 || layout == null) {
+            return false
+        }
+        return try {
+            super.performLongClick()
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error performing long click", e)
+            false
+        }
+    }
+
+    override fun performLongClick(x: Float, y: Float): Boolean {
+        if (width <= 0 || height <= 0 || layout == null) {
+            return false
+        }
+        return try {
+            super.performLongClick(x, y)
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error performing long click at ($x, $y)", e)
+            try {
+                super.performLongClick()
+            } catch (e2: Exception) {
+                Log.e("ExtendedEditText", "Error performing fallback long click", e2)
+                false
+            }
+        }
+    }
+
+    override fun onDragEvent(event: android.view.DragEvent): Boolean {
+        if (width <= 0 || height <= 0 || layout == null) {
+            return false
+        }
+        return try {
+            super.onDragEvent(event)
+        } catch (e: Exception) {
+            Log.e("ExtendedEditText", "Error handling drag event", e)
+            false
+        }
     }
 
     /**
